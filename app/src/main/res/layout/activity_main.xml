@@ -21,7 +21,8 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingTop="2dp"
-        android:layout_gravity="center_horizontal">
+        android:layout_gravity="center_horizontal"
+        android:theme="@style/AppTheme"   >
 
         <!-- Checkboxes for each sensor will be added here dynamically -->
 

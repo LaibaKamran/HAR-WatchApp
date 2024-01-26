@@ -1,6 +1,7 @@
 package com.watchsensorapp;
 
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -11,11 +12,15 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import java.io.BufferedWriter;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,8 +32,7 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
     private LinearLayout sensorsContainer;
     private Map<Integer, TextView> sensorTextViewMap = new HashMap<>();
     private Map<Integer, List<Float>> sensorDataMap = new HashMap<>();
-
-    // ...
+    private String serverIP;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,32 +40,25 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         setContentView(R.layout.activity_sensor_display);
 
         sensorsContainer = findViewById(R.id.sensorsContainer);
-
-        // Get the sensor manager
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
-        // Retrieve the list of selected sensors from the intent
+        serverIP = getIntent().getStringExtra("serverIP");
         ArrayList<Integer> selectedSensorTypes = getIntent().getIntegerArrayListExtra("selectedSensorTypes");
 
         if (selectedSensorTypes != null) {
-            // Register selected sensors for updates and create layout for each sensor
             for (int sensorType : selectedSensorTypes) {
                 Sensor sensor = sensorManager.getDefaultSensor(sensorType);
                 if (sensor != null) {
                     registerSensor(sensorType);
                     createSensorLayout(sensor.getName(), sensorType);
                 } else {
-                    // Handle case where sensor is not available
                     setNoSensorAvailableText(sensorType);
                 }
             }
         } else {
-            // Handle case where no sensors are selected
             setNoSelectedSensorsText();
         }
     }
-
-// ...
 
     private void createSensorLayout(String sensorName, int sensorType) {
         LinearLayout sensorLayout = new LinearLayout(this);
@@ -107,7 +104,6 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         sensorTextView.setText("No sensor available");
     }
 
-
     @Override
     public void onSensorChanged(SensorEvent event) {
         int sensorType = event.sensor.getType();
@@ -131,35 +127,61 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         TextView sensorTextView = sensorTextViewMap.get(sensorType);
         sensorTextView.setText(sensorData);
 
+        Intent intent = getIntent();
+        String userId = intent.getStringExtra("userId");
+
         // Send data to the server
-        sendDataToServer(sensorData);
+        sendDataToServer(sensorData, userId);
     }
 
-    private void sendDataToServer(final String message) {
+    private void sendDataToServer(final String message, final String userId) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    System.out.println("Sending message to server: " + message);
-                    Socket socket = new Socket("192.168.148.7", 12345);
+                    // Construct the URL
+                    String urlString = "http://" + serverIP + ":5000/sensor-data";
+                    URL url = new URL(urlString);
 
-                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+                    // Open the connection
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestMethod("POST");
+                    connection.setRequestProperty("Content-Type", "application/json");
+                    connection.setDoOutput(true);
 
-                    // Send the message to the server
-                    writer.write(message);
-                    writer.newLine();
-                    writer.flush();
+                    // Construct the JSON body
+                    JSONObject jsonBody = new JSONObject();
+                    jsonBody.put("source", "android_app");
+                    jsonBody.put("user_id", userId);
+                    jsonBody.put("timestamp", System.currentTimeMillis());
+                    // Assuming 'message' is the data you want to send
+                    jsonBody.put("message", message);
 
-                    // Close the socket
-                    socket.close();
+                    // Write the JSON body to the output stream
+                    try (OutputStream os = connection.getOutputStream()) {
+                        byte[] input = jsonBody.toString().getBytes("utf-8");
+                        os.write(input, 0, input.length);
+                    } catch(IOException e){
+                        e.printStackTrace();
+                        System.out.println("Exception: " + e.getMessage());
+
+                    }
+
+                    // Get the response from the server
+                    try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) {
+                        StringBuilder response = new StringBuilder();
+                        String responseLine = null;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+                        // You can handle the response from the server here
+                        System.out.println("Server Response: " + response.toString());
+                    }
+
+                    // Close the connection
+                    connection.disconnect();
                     System.out.println("Message sent successfully");
-                } catch (UnknownHostException e) {
-                    e.printStackTrace();
-                    System.out.println("UnknownHostException: " + e.getMessage());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    System.out.println("IOException: " + e.getMessage());
-                } catch (Exception e) {
+                } catch (IOException | JSONException e) {
                     e.printStackTrace();
                     System.out.println("Exception: " + e.getMessage());
                 }
@@ -168,12 +190,8 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
     }
 
 
-
-
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // Handle accuracy changes if needed
-    }
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     @Override
     protected void onResume() {

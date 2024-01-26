@@ -6,15 +6,21 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET"/>
     <uses-feature android:name="android.hardware.type.watch" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.DeviceDefault">
+        android:theme="@android:style/Theme.DeviceDefault"
+        android:usesCleartextTraffic="true">
+
 
         <uses-library
             android:name="com.google.android.wearable"
@@ -39,7 +45,15 @@
         <activity
             android:name=".SensorDisplayActivity"
             android:label="Sensor Display Activity"
-            android:theme="@style/SensorDisplayTheme">
+            android:theme="@style/AppTheme">
+        </activity>
+
+        <!-- Add SendDataToServerActivity -->
+        <activity
+            android:name=".SendDataToServerActivity"
+            android:label="Send Data To Server"
+            android:theme="@style/AppTheme"
+            >
         </activity>
 
     </application>
