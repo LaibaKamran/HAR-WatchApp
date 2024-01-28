@@ -7,6 +7,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -33,6 +34,7 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
     private Map<Integer, TextView> sensorTextViewMap = new HashMap<>();
     private Map<Integer, List<Float>> sensorDataMap = new HashMap<>();
     private String serverIP;
+    private String userId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +45,7 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
         serverIP = getIntent().getStringExtra("serverIP");
+        userId = getIntent().getStringExtra("userId");
         ArrayList<Integer> selectedSensorTypes = getIntent().getIntegerArrayListExtra("selectedSensorTypes");
 
         if (selectedSensorTypes != null) {
@@ -127,9 +130,6 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         TextView sensorTextView = sensorTextViewMap.get(sensorType);
         sensorTextView.setText(sensorData);
 
-        Intent intent = getIntent();
-        String userId = intent.getStringExtra("userId");
-
         // Send data to the server
         sendDataToServer(sensorData, userId);
     }
@@ -151,26 +151,27 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
 
                     // Construct the JSON body
                     JSONObject jsonBody = new JSONObject();
-                    jsonBody.put("source", "android_app");
+                    jsonBody.put("source", "smartwatch");
                     jsonBody.put("user_id", userId);
                     jsonBody.put("timestamp", System.currentTimeMillis());
-                    // Assuming 'message' is the data you want to send
                     jsonBody.put("message", message);
 
                     // Write the JSON body to the output stream
                     try (OutputStream os = connection.getOutputStream()) {
                         byte[] input = jsonBody.toString().getBytes("utf-8");
                         os.write(input, 0, input.length);
-                    } catch(IOException e){
+                    } catch (IOException e) {
                         e.printStackTrace();
                         System.out.println("Exception: " + e.getMessage());
-
                     }
+
+                    // Log the JSON content before sending
+                    Log.d("JSON", "Sending JSON: " + jsonBody.toString());
 
                     // Get the response from the server
                     try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) {
                         StringBuilder response = new StringBuilder();
-                        String responseLine = null;
+                        String responseLine;
                         while ((responseLine = br.readLine()) != null) {
                             response.append(responseLine.trim());
                         }
@@ -188,7 +189,6 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
             }
         }).start();
     }
-
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
