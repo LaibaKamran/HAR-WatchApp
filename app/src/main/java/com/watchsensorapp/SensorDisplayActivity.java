@@ -6,6 +6,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.LinearLayout;
@@ -138,9 +139,9 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
 
 
     private void sendDataToServer(final String message, final String userId) {
-        new Thread(new Runnable() {
+        new AsyncTask<Void, Void, Void>() {
             @Override
-            public void run() {
+            protected Void doInBackground(Void... voids) {
                 try {
                     // Construct the URL
                     String urlString = "http://" + serverIP + ":5000/sensor-data";
@@ -173,9 +174,6 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
                     try (OutputStream os = connection.getOutputStream()) {
                         byte[] input = jsonBody.toString().getBytes("utf-8");
                         os.write(input, 0, input.length);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        System.out.println("Exception: " + e.getMessage());
                     }
 
                     // Log the JSON content before sending
@@ -189,18 +187,19 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
                             response.append(responseLine.trim());
                         }
                         // You can handle the response from the server here
-                        System.out.println("Server Response: " + response.toString());
+                        Log.d("ServerResponse", "Server Response: " + response.toString());
                     }
 
                     // Close the connection
                     connection.disconnect();
-                    System.out.println("Message sent successfully");
+                    Log.d("MessageSent", "Message sent successfully");
                 } catch (IOException | JSONException e) {
                     e.printStackTrace();
-                    System.out.println("Exception: " + e.getMessage());
+                    Log.e("Exception", "Exception: " + e.getMessage());
                 }
+                return null;
             }
-        }).start();
+        }.execute();
     }
 
     @Override

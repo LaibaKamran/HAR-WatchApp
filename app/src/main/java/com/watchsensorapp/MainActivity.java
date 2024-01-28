@@ -88,7 +88,6 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int which) {
                 serverIP = input.getText().toString();
                 saveServerIPAndUserID(serverIP, userId); // Save server IP and user ID
-                startSensorDisplayActivity(); // Start SensorDisplayActivity
             }
         });
 
