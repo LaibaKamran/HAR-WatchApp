@@ -48,13 +48,6 @@
             android:theme="@style/AppTheme">
         </activity>
 
-        <!-- Add SendDataToServerActivity -->
-        <activity
-            android:name=".SendDataToServerActivity"
-            android:label="Send Data To Server"
-            android:theme="@style/AppTheme"
-            >
-        </activity>
 
     </application>
 
