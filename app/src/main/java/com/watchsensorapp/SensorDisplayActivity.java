@@ -110,6 +110,8 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
     @Override
     public void onSensorChanged(SensorEvent event) {
         int sensorType = event.sensor.getType();
+        String sensorName = event.sensor.getName(); // Retrieve sensor name
+
         List<Float> sensorValues = sensorDataMap.get(sensorType);
 
         if (sensorValues.size() < 3) {
@@ -122,7 +124,7 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
             sensorValues.set(i, event.values[i]);
         }
 
-        String sensorData = sensorType + "\n" +
+        String sensorData = sensorName + "\n" + // Change to sensorName
                 "X:" + sensorValues.get(0) + "\n" +
                 "Y:" + sensorValues.get(1) + "\n" +
                 "Z:" + sensorValues.get(2);
@@ -133,6 +135,7 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         // Send data to the server
         sendDataToServer(sensorData, userId);
     }
+
 
     private void sendDataToServer(final String message, final String userId) {
         new Thread(new Runnable() {
@@ -149,12 +152,22 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
                     connection.setRequestProperty("Content-Type", "application/json");
                     connection.setDoOutput(true);
 
+                    // Parse the message to extract sensor type, X, Y, Z values
+                    String[] messageParts = message.split("\n");
+                    String sensorType = messageParts[0];
+                    float xValue = Float.parseFloat(messageParts[1].substring(2)); // Remove "X:"
+                    float yValue = Float.parseFloat(messageParts[2].substring(2)); // Remove "Y:"
+                    float zValue = Float.parseFloat(messageParts[3].substring(2)); // Remove "Z:"
+
                     // Construct the JSON body
                     JSONObject jsonBody = new JSONObject();
                     jsonBody.put("source", "smartwatch");
                     jsonBody.put("user_id", userId);
                     jsonBody.put("timestamp", System.currentTimeMillis());
-                    jsonBody.put("message", message);
+                    jsonBody.put("sensor_type", sensorType);
+                    jsonBody.put("x", xValue);
+                    jsonBody.put("y", yValue);
+                    jsonBody.put("z", zValue);
 
                     // Write the JSON body to the output stream
                     try (OutputStream os = connection.getOutputStream()) {
