@@ -8,11 +8,13 @@ import android.hardware.SensorManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
 import androidx.appcompat.app.AppCompatActivity;
-import org.json.JSONException;
-import org.json.JSONObject;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
@@ -30,6 +32,11 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
     private String serverIP;
     private String userId;
     private int serverPort = 12345; // Port number where the server is listening
+    private boolean sendingData = false;
+    private long startTime = 0;
+    private long stopTime = 0;
+
+    private long timestamp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +63,35 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         } else {
             setNoSelectedSensorsText();
         }
+
+        Button startButton = findViewById(R.id.startButton);
+        startButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startSendingData();
+            }
+        });
+
+        Button stopButton = findViewById(R.id.stopButton);
+        stopButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stopSendingData();
+            }
+        });
+    }
+
+    private void startSendingData() {
+        sendingData = true;
+        startTime = System.currentTimeMillis();
+    }
+
+    private void stopSendingData() {
+        sendingData = false;
+        Log.d("SendingData", "sendingData value after change: " + sendingData);
+        stopTime = System.currentTimeMillis();
+        timestamp = stopTime - startTime;
+        Log.d("Duration", "Duration: " + timestamp + " milliseconds");
     }
 
     private void createSensorLayout(String sensorName, int sensorType) {
@@ -127,13 +163,14 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         TextView sensorTextView = sensorTextViewMap.get(sensorType);
         sensorTextView.setText(sensorData);
 
-        // Send data to the server
-        sendDataToServer(sensorData, userId, "smartwatch", sensorName);
+        // Send data to the server if sendingData is true
+        if (sendingData) {
+            sendDataToServer(sensorData, userId, "smartwatch", sensorName);
+        }
     }
 
     private void sendDataToServer(final String message, final String userId, final String source, final String sensorType) {
-        final long timestamp = System.currentTimeMillis(); // Get the current timestamp
-
+        //  final long timestamp = System.currentTimeMillis();
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
@@ -146,15 +183,18 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
 
                     // Construct the message including the timestamp
                     String messageWithTimestamp = source + "," + userId + "," + sensorType + "," + timestamp + "," + message;
+                    // Check if sendingData flag is still true before sending the message
+                    if (sendingData) {
+                        // Write the sensor data along with source, user ID, sensor type, and timestamp to the output stream
+                        outputStream.writeUTF(messageWithTimestamp);
 
-                    // Write the sensor data along with source, user ID, sensor type, and timestamp to the output stream
-                    outputStream.writeUTF(messageWithTimestamp);
-
+                        Log.d("MessageSent", "Message sent successfully");
+                    } else {
+                        Log.d("MessageSent", "Message sending stopped by user");
+                    }
                     // Close the output stream and the socket
                     outputStream.close();
                     socket.close();
-
-                    Log.d("MessageSent", "Message sent successfully");
                 } catch (IOException e) {
                     e.printStackTrace();
                     Log.e("Exception", "Exception: " + e.getMessage());
