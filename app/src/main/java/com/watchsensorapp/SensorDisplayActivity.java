@@ -1,7 +1,6 @@
 package com.watchsensorapp;
 
 import android.content.Context;
-import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -11,18 +10,12 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
 import androidx.appcompat.app.AppCompatActivity;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +29,7 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
     private Map<Integer, List<Float>> sensorDataMap = new HashMap<>();
     private String serverIP;
     private String userId;
+    private int serverPort = 12345; // Port number where the server is listening
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,66 +128,34 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         sensorTextView.setText(sensorData);
 
         // Send data to the server
-        sendDataToServer(sensorData, userId);
+        sendDataToServer(sensorData, userId, "smartwatch", sensorName);
     }
 
+    private void sendDataToServer(final String message, final String userId, final String source, final String sensorType) {
+        final long timestamp = System.currentTimeMillis(); // Get the current timestamp
 
-    private void sendDataToServer(final String message, final String userId) {
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
                 try {
-                    // Construct the URL
-                    String urlString = "http://" + serverIP + ":5000/sensor-data";
-                    URL url = new URL(urlString);
+                    // Open a socket connection to the server
+                    Socket socket = new Socket(serverIP, serverPort);
 
-                    // Open the connection
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setRequestMethod("POST");
-                    connection.setRequestProperty("Content-Type", "application/json");
-                    connection.setDoOutput(true);
+                    // Create a data output stream to send data to the server
+                    DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
 
-                    // Parse the message to extract sensor type, X, Y, Z values
-                    String[] messageParts = message.split("\n");
-                    String sensorType = messageParts[0];
-                    float xValue = Float.parseFloat(messageParts[1].substring(2)); // Remove "X:"
-                    float yValue = Float.parseFloat(messageParts[2].substring(2)); // Remove "Y:"
-                    float zValue = Float.parseFloat(messageParts[3].substring(2)); // Remove "Z:"
+                    // Construct the message including the timestamp
+                    String messageWithTimestamp = source + "," + userId + "," + sensorType + "," + timestamp + "," + message;
 
-                    // Construct the JSON body
-                    JSONObject jsonBody = new JSONObject();
-                    jsonBody.put("source", "smartwatch");
-                    jsonBody.put("user_id", userId);
-                    jsonBody.put("timestamp", System.currentTimeMillis());
-                    jsonBody.put("sensor_type", sensorType);
-                    jsonBody.put("x", xValue);
-                    jsonBody.put("y", yValue);
-                    jsonBody.put("z", zValue);
+                    // Write the sensor data along with source, user ID, sensor type, and timestamp to the output stream
+                    outputStream.writeUTF(messageWithTimestamp);
 
-                    // Write the JSON body to the output stream
-                    try (OutputStream os = connection.getOutputStream()) {
-                        byte[] input = jsonBody.toString().getBytes("utf-8");
-                        os.write(input, 0, input.length);
-                    }
+                    // Close the output stream and the socket
+                    outputStream.close();
+                    socket.close();
 
-                    // Log the JSON content before sending
-                    Log.d("JSON", "Sending JSON: " + jsonBody.toString());
-
-                    // Get the response from the server
-                    try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) {
-                        StringBuilder response = new StringBuilder();
-                        String responseLine;
-                        while ((responseLine = br.readLine()) != null) {
-                            response.append(responseLine.trim());
-                        }
-                        // You can handle the response from the server here
-                        Log.d("ServerResponse", "Server Response: " + response.toString());
-                    }
-
-                    // Close the connection
-                    connection.disconnect();
                     Log.d("MessageSent", "Message sent successfully");
-                } catch (IOException | JSONException e) {
+                } catch (IOException e) {
                     e.printStackTrace();
                     Log.e("Exception", "Exception: " + e.getMessage());
                 }
