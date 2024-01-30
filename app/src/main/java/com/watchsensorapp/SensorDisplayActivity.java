@@ -36,8 +36,6 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
     private long startTime = 0;
     private long stopTime = 0;
 
-    private long timestamp;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -90,8 +88,6 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         sendingData = false;
         Log.d("SendingData", "sendingData value after change: " + sendingData);
         stopTime = System.currentTimeMillis();
-        timestamp = stopTime - startTime;
-        Log.d("Duration", "Duration: " + timestamp + " milliseconds");
     }
 
     private void createSensorLayout(String sensorName, int sensorType) {
@@ -142,6 +138,7 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
     public void onSensorChanged(SensorEvent event) {
         int sensorType = event.sensor.getType();
         String sensorName = event.sensor.getName(); // Retrieve sensor name
+        sensorName=sensorName.replaceAll(" ","_");
 
         List<Float> sensorValues = sensorDataMap.get(sensorType);
 
@@ -159,18 +156,22 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
                 "X:" + sensorValues.get(0) + "\n" +
                 "Y:" + sensorValues.get(1) + "\n" +
                 "Z:" + sensorValues.get(2);
+        String sensorDataToSend = "Sensor Type: "+sensorName + ":" + // Change to sensorName
+                sensorValues.get(0) + "," +
+                sensorValues.get(1) + "," +
+                 sensorValues.get(2)+"\n";
 
         TextView sensorTextView = sensorTextViewMap.get(sensorType);
         sensorTextView.setText(sensorData);
 
         // Send data to the server if sendingData is true
         if (sendingData) {
-            sendDataToServer(sensorData, userId, "smartwatch", sensorName);
+            sendDataToServer(sensorDataToSend, userId, "smartwatch");
         }
     }
 
-    private void sendDataToServer(final String message, final String userId, final String source, final String sensorType) {
-        //  final long timestamp = System.currentTimeMillis();
+    private void sendDataToServer(final String message, final String userId, final String source) {
+          final long timestamp = System.currentTimeMillis();
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
@@ -182,11 +183,16 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
                     DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
 
                     // Construct the message including the timestamp
-                    String messageWithTimestamp = source + "," + userId + "," + sensorType + "," + timestamp + "," + message;
+                    //StringBuilder messageWithTimestamp = new StringBuilder();
+                    StringBuilder messageWithTimestamp = new StringBuilder("Source: Smart_Watch").append(", User ID: ").append(userId).append(", Timestamp: ").append(System.currentTimeMillis()).append(",").append(message);
+
+                    // Log the data before sending to the server
+                    Log.d("DataToSend", "Data: " + messageWithTimestamp.toString());
+
                     // Check if sendingData flag is still true before sending the message
                     if (sendingData) {
                         // Write the sensor data along with source, user ID, sensor type, and timestamp to the output stream
-                        outputStream.writeUTF(messageWithTimestamp);
+                        outputStream.writeUTF(messageWithTimestamp.toString());
 
                         Log.d("MessageSent", "Message sent successfully");
                     } else {
