@@ -32,10 +32,6 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
     private String serverIP;
     private String userId;
     private int serverPort = 12345; // Port number where the server is listening
-    private boolean sendingData = false;
-    private long startTime = 0;
-    private long stopTime = 0;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,33 +57,6 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         } else {
             setNoSelectedSensorsText();
         }
-
-        Button startButton = findViewById(R.id.startButton);
-        startButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startSendingData();
-            }
-        });
-
-        Button stopButton = findViewById(R.id.stopButton);
-        stopButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                stopSendingData();
-            }
-        });
-    }
-
-    private void startSendingData() {
-        sendingData = true;
-        startTime = System.currentTimeMillis();
-    }
-
-    private void stopSendingData() {
-        sendingData = false;
-        Log.d("SendingData", "sendingData value after change: " + sendingData);
-        stopTime = System.currentTimeMillis();
     }
 
     private void createSensorLayout(String sensorName, int sensorType) {
@@ -165,9 +134,8 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
         sensorTextView.setText(sensorData);
 
         // Send data to the server if sendingData is true
-        if (sendingData) {
+
             sendDataToServer(sensorDataToSend, userId, "smartwatch");
-        }
     }
 
     private void sendDataToServer(final String message, final String userId, final String source) {
@@ -190,14 +158,13 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
                     Log.d("DataToSend", "Data: " + messageWithTimestamp.toString());
 
                     // Check if sendingData flag is still true before sending the message
-                    if (sendingData) {
                         // Write the sensor data along with source, user ID, sensor type, and timestamp to the output stream
                         outputStream.writeUTF(messageWithTimestamp.toString());
 
                         Log.d("MessageSent", "Message sent successfully");
-                    } else {
+
                         Log.d("MessageSent", "Message sending stopped by user");
-                    }
+
                     // Close the output stream and the socket
                     outputStream.close();
                     socket.close();
