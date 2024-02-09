@@ -15,18 +15,24 @@
         android:text="@string/Sensors"
         android:layout_gravity="" />
 
-    <LinearLayout
-        android:id="@+id/sensorsContainer"
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingTop="2dp"
-        android:layout_gravity="center_horizontal"
-        android:theme="@style/AppTheme"   >
+        android:layout_gravity="center_horizontal">
 
-        <!-- Checkboxes for each sensor will be added here dynamically -->
+        <LinearLayout
+            android:id="@+id/sensorsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="2dp"
+            android:layout_gravity="center_horizontal">
 
-    </LinearLayout>
+            <!-- Checkboxes for each sensor will be added here dynamically -->
+
+        </LinearLayout>
+
+    </ScrollView>
 
     <Button
         android:id="@+id/showSelectedSensorsButton"
