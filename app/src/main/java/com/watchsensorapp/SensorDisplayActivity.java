@@ -139,38 +139,50 @@ public class SensorDisplayActivity extends AppCompatActivity implements SensorEv
     }
 
     private void sendDataToServer(final String message, final String userId, final String source) {
-          final long timestamp = System.currentTimeMillis();
+        final long timestamp = System.currentTimeMillis();
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
+                Socket socket = null;
+                DataOutputStream outputStream = null;
                 try {
                     // Open a socket connection to the server
-                    Socket socket = new Socket(serverIP, serverPort);
+                    socket = new Socket(serverIP, serverPort);
 
                     // Create a data output stream to send data to the server
-                    DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+                    outputStream = new DataOutputStream(socket.getOutputStream());
 
                     // Construct the message including the timestamp
-                    //StringBuilder messageWithTimestamp = new StringBuilder();
-                    StringBuilder messageWithTimestamp = new StringBuilder("Source: Smart_Watch").append(", User ID: ").append(userId).append(", Timestamp: ").append(System.currentTimeMillis()).append(",").append(message);
+                    StringBuilder messageWithTimestamp = new StringBuilder("Source: Smart_Watch")
+                            .append(", User ID: ").append(userId)
+                            .append(", Timestamp: ").append(System.currentTimeMillis())
+                            .append(",").append(message);
 
                     // Log the data before sending to the server
                     Log.d("DataToSend", "Data: " + messageWithTimestamp.toString());
 
                     // Check if sendingData flag is still true before sending the message
-                        // Write the sensor data along with source, user ID, sensor type, and timestamp to the output stream
-                        outputStream.writeUTF(messageWithTimestamp.toString());
-
-                        Log.d("MessageSent", "Message sent successfully");
-
-                        Log.d("MessageSent", "Message sending stopped by user");
-
-                    // Close the output stream and the socket
-                    outputStream.close();
-                    socket.close();
+                    outputStream.writeUTF(messageWithTimestamp.toString());
+                    Log.d("MessageSent", "Message sent successfully");
                 } catch (IOException e) {
                     e.printStackTrace();
                     Log.e("Exception", "Exception: " + e.getMessage());
+                } finally {
+                    // Close the output stream and the socket
+                    if (outputStream != null) {
+                        try {
+                            outputStream.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if (socket != null) {
+                        try {
+                            socket.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
                 return null;
             }
